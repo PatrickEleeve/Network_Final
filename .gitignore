@@ -5,5 +5,11 @@ __pycache__/
 .claude/
 .workbuddy/
 results/*.npz
+figures/*.png
+figures/*.jpg
+figures/*.jpeg
+figures/*.pdf
+figures/*.svg
+figures_matlab/
 !figures/.gitkeep
 !results/.gitkeep
