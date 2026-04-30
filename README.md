@@ -7,6 +7,22 @@ The project implements the paper's linear stochastic opinion recursion on
 directed graphs, reproduces Figures 1-7, and adds topology, selective-exposure,
 bot, and community-structure variations.
 
+## Report
+
+The current paper draft is `report.tex`. PDF files are treated as local build
+artifacts and are intentionally ignored by git, including any locally compiled
+`report.pdf` or reference PDFs kept outside version control.
+
+To rebuild the PDF while keeping LaTeX auxiliary files out of the repository
+root:
+
+```bash
+mkdir -p build/latex
+pdflatex -interaction=nonstopmode -halt-on-error -output-directory=build/latex report.tex
+pdflatex -interaction=nonstopmode -halt-on-error -output-directory=build/latex report.tex
+cp build/latex/report.pdf report.pdf
+```
+
 ## Setup
 
 ```bash
@@ -25,6 +41,29 @@ python3 scripts/replicate_fig6.py
 python3 scripts/replicate_fig7.py
 python3 scripts/validate_theorem1.py
 ```
+
+## MATLAB Figure Versions
+
+Each reproduced paper figure also has its own MATLAB entry script:
+
+```matlab
+run("matlab/replicate_fig1_matlab.m")
+run("matlab/replicate_fig2_matlab.m")
+run("matlab/replicate_fig3_matlab.m")
+run("matlab/replicate_fig4_matlab.m")
+run("matlab/replicate_fig5_matlab.m")
+run("matlab/replicate_fig6_matlab.m")
+run("matlab/replicate_fig7_matlab.m")
+```
+
+To render all MATLAB versions:
+
+```matlab
+run("matlab/run_all_matlab_reproductions.m")
+```
+
+MATLAB outputs are saved in `figures_matlab/` as 450 DPI PNG files and vector
+PDF files for paper layout.
 
 ## Variation Studies
 

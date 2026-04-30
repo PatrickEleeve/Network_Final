@@ -268,7 +268,7 @@ def main() -> None:
     COL_MINUS = "#2471a3"
 
     # Show histograms for 3 key proportions: 0%, 20%, 50%
-    for idx, (prop_show, alpha) in enumerate([(0, 0.9), (4, 0.7), (7, 0.5)]):
+    for idx, (prop_show, alpha) in enumerate([(0, 0.9), (4, 0.7), (8, 0.5)]):
         r = results_asym[prop_show]
         Rreg = r["R_regular"]
         Qreg = r["Q_regular"]

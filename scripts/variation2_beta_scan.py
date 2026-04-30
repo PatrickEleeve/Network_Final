@@ -133,8 +133,6 @@ def main() -> None:
 
     # ── analytical: E[Z|Q=+1] for Beta(b,1) ──────────────────────────────
     analytical_mean_Z_plus = -1.0 + 2.0 * B_VALUES / (B_VALUES + 1.0)
-    analytical_var_Z = 4.0 * B_VALUES * 1.0 / ((B_VALUES + 1.0)**2 * (B_VALUES + 2.0)) \
-                       + analytical_mean_Z_plus**2
 
     # ── identify transition ──────────────────────────────────────────────
     # Polarization onset: where gap exceeds 10% of paper's gap at b=8

@@ -53,6 +53,13 @@ def run_to_stationarity(
     else:
         R = R0.astype(np.float64).copy()
 
+    fixed = S == 1
+    if fixed.any():
+        # In the paper's bot experiment, bots have zero in-degree, Q=Z=+1,
+        # and therefore never change opinion.  Initialize and keep them fixed
+        # so the finite-time simulation matches that construction exactly.
+        R[fixed] = Q[fixed]
+
     traj = None
     if record_trajectory:
         traj = [R.copy()]
@@ -61,6 +68,8 @@ def run_to_stationarity(
         Z = sample_media(Q, S, scenario, rng)
         W = external_signal(Q, Z, in_deg, c, d)
         R = one_step_update(R, A, W, c, d)
+        if fixed.any():
+            R[fixed] = Q[fixed]
         if record_trajectory and ((k + 1) % record_every == 0):
             traj.append(R.copy())
 

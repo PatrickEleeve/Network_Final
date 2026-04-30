@@ -1,9 +1,12 @@
 __pycache__/
 *.pyc
+*.pdf
+thesis_master_overview.md
 .venv/
 .DS_Store
 .claude/
 .workbuddy/
+build/
 results/*.npz
 figures/*.png
 figures/*.jpg
