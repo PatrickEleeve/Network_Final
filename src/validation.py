@@ -96,14 +96,14 @@ def fig4_proposition4_prediction(
     c: float,
     d: float,
 ) -> dict:
-    """Finite-graph Proposition 4/5 prediction for the Fig. 4 no-memory case.
+    """Finite-graph Proposition 4/5 plug-in benchmark for Fig. 4 no-memory.
 
     Proposition 4/5 assumes c + d = 1.  This helper evaluates the closed-form
-    prediction using the realized graph through rho_2 = mean_i sum_j A[i,j]^2
+    benchmark using the realized graph through rho_2 = mean_i sum_j A[i,j]^2
     and the realized Q mix through the media-signal moments.
     """
     if not np.isclose(c + d, 1.0):
-        raise ValueError("Proposition 4/5 prediction requires c + d = 1")
+        raise ValueError("Proposition 4/5 plug-in benchmark requires c + d = 1")
 
     row_sq = np.asarray(A.power(2).sum(axis=1)).ravel()
     rho2 = float(np.mean(row_sq))

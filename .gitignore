@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 *.pdf
+report.tex
 thesis_master_overview.md
 AGENTS.md
 CLAUDE.md

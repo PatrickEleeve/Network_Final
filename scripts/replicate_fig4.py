@@ -75,7 +75,7 @@ for case in CASES:
     print(f"  Var(R*|Q=+1)   = {stats['var_Q_plus']:.4f}  (source benchmark ≈ {TARGET['var_Q_cond']})")
     print(f"  Var(R*|Q=-1)   = {stats['var_Q_minus']:.4f}  (source benchmark ≈ {TARGET['var_Q_cond']})")
     if theory is not None:
-        print(f"  Prop. 4 finite-graph Var = {theory['var']:.4f},  ρ₂ = {theory['rho2']:.5f}")
+        print(f"  Prop. 4 plug-in Var = {theory['var']:.4f},  ρ₂ = {theory['rho2']:.5f}")
     print()
 
 
@@ -119,7 +119,7 @@ for case in CASES:
     if theory_rows:
         mean, se = _mean_se([row["var"] for row in theory_rows])
         rho_mean, rho_se = _mean_se([row["rho2"] for row in theory_rows])
-        print(f"    Prop. 4 Var prediction = {mean:+.4f} ± {se:.4f}")
+        print(f"    Prop. 4 plug-in Var    = {mean:+.4f} ± {se:.4f}")
         print(f"    ρ₂                     = {rho_mean:.5f} ± {rho_se:.5f}")
 print()
 

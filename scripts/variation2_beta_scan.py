@@ -1,8 +1,8 @@
-"""Variation 2: Polarization phase transition — scan Beta asymmetry.
+"""Variation 2: Selective-exposure strength scan — Beta asymmetry.
 
 Critique from CLAUDE.md (critique_2):
     "Single parameter point Beta(8,1)/Beta(1,8). Our test: scan Beta asymmetry
-    from (8,1) to (1.5, 1). Identify polarization phase transition threshold."
+    from (8,1) to (1.5, 1). Check how polarization grows with exposure strength."
 
 We scan the Beta shape parameter b from 1 (uniform, no selective exposure) to 8
 (paper's value, strong selective exposure):
@@ -123,16 +123,16 @@ def main() -> None:
     # ── analytical: E[Z|Q=+1] for Beta(b,1) ──────────────────────────────
     analytical_mean_Z_plus = -1.0 + 2.0 * B_VALUES / (B_VALUES + 1.0)
 
-    # ── identify transition ──────────────────────────────────────────────
-    # Polarization onset: where gap exceeds 10% of paper's gap at b=8
+    # ── identify reference crossing ──────────────────────────────────────
+    # Descriptive marker: where gap exceeds 10% of paper's gap at b=8.
     paper_gap = PAPER["mean_plus"] - PAPER["mean_minus"]  # ≈ 0.7368
     threshold = 0.10 * paper_gap
     transitional = gaps_q > threshold
     if transitional.any():
         b_crit = B_VALUES[transitional][0]
-        print(f"\nPolarization onset (>10% paper gap): b ≈ {b_crit:.1f}")
+        print(f"\n10% paper-gap reference crossing: b ≈ {b_crit:.1f}")
     else:
-        print("\nNo clear polarization threshold detected in scanned range.")
+        print("\nNo 10% paper-gap crossing detected in scanned range.")
 
     # ── plot ─────────────────────────────────────────────────────────────
     fig, axes = plt.subplots(2, 2, figsize=(13, 9))
@@ -192,7 +192,7 @@ def main() -> None:
     ax.grid(alpha=0.3)
 
     fig.suptitle(
-        "Variation 2 — Polarization phase transition with selective exposure strength\n"
+        "Variation 2 — Selective-exposure strength scan\n"
         rf"ER($n={N},\;p={P}$), $c={C},\;d={D}$, "
         r"$Z|Q{=}+1\sim\mathrm{Beta}(b,1)$, "
         r"$Z|Q{=}-1\sim\mathrm{Beta}(1,b)$",

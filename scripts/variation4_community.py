@@ -1,23 +1,21 @@
-"""Variation 4: Community structure — SBM echo chambers vs ER random mixing.
+"""Variation 4: Community structure - SBM echo chambers vs ER random mixing.
 
-Critique from CLAUDE.md (critique_4):
-    "Real social networks are scale-free with heavy-tailed in-degree distributions;
-    also have clustering, which violates tree-like-limit assumption."
-    This variation tests whether community structure amplifies polarization
-    beyond what selective exposure alone produces.
+This variation checks whether community structure amplifies the Fig. 4
+selective-exposure mechanism. It compares a two-block directed SBM against a
+directed ER graph with similar mean degree, using five independent graph,
+attribute, and dynamics seeds.
 
 Design:
-    1. SBM (2 blocks, 500 each): p_in=0.05, p_out=0.01 → strong modularity
-       - Community-aligned Q: Q=+1 in block 0, Q=−1 in block 1  (echo chamber)
+    1. SBM (2 blocks, 500 each): p_in=0.05, p_out=0.01
+       - Community-aligned Q: Q=+1 mostly in block 0, Q=-1 mostly in block 1
        - Community-uncorrelated Q: random Q across blocks
-    2. ER (n=1000, p=0.03): comparable mean degree ~30
-       - Same two Q assignments
+    2. ER (n=1000, p=0.03): comparable mean degree
+       - Same Q assignments within each seed batch
 
-All use selective exposure: Z ~ Beta(8,1)/Beta(1,8) keyed on Q.
-c=0.50, d=0.45 (memory case, same as Fig 4).
-
-Key question: does community structure amplify the Q+ vs Q− gap beyond
-what selective exposure alone achieves on a random-mixing graph?
+All cases use selective exposure:
+    Q=+1: Z ~ -1 + 2 Beta(8,1)
+    Q=-1: Z ~ -1 + 2 Beta(1,8)
+with c=0.50, d=0.45 (memory case, same as Fig. 4).
 
 Run:
     python3 scripts/variation4_community.py
@@ -36,37 +34,30 @@ from src.dynamics import run_to_stationarity
 from src.graph_construction import directed_er, directed_sbm
 from src.validation import empirical_moments
 
-# ── parameters ───────────────────────────────────────────────────────────────
-N         = 1000
-N_BLOCK   = 500        # 2 blocks of 500 each
-N_ITER    = 200
-SEED      = 42
-SCENARIO  = "fig4"     # selective exposure
+# Parameters
+N = 1000
+N_BLOCK = 500
+N_ITER = 200
+SEED = 42
+N_SEEDS = 5
+SEED_STEP = 1000
+SCENARIO = "fig4"
 
 C = 0.50
 D = 0.45
 
-# ER: mean degree ≈ 999 * 0.03 = 30
 P_ER = 0.03
-
-# SBM: mean degree = 499 * p_in + 500 * p_out ≈ 30
-P_IN  = 0.05           # within-block
-P_OUT = 0.01           # cross-block
-# modularity ≈ (500*0.05 - 500*0.01) / (500*(0.05+0.01)) ≈ 0.67
+P_IN = 0.05
+P_OUT = 0.01
 
 FIG_PATH = Path(__file__).resolve().parents[1] / "figures" / "variation4_community.png"
 
-# Paper reference (Fig 4 baseline)
 PAPER = dict(var=0.1484, mean_plus=+0.3684, mean_minus=-0.3684, var_cond=0.0095)
 
 
-# ── helpers ──────────────────────────────────────────────────────────────────
 def build_sbm(seed: int):
-    """2-block SBM with modularity."""
-    p_matrix = np.array([[P_IN, P_OUT],
-                          [P_OUT, P_IN]], dtype=np.float64)
+    p_matrix = np.array([[P_IN, P_OUT], [P_OUT, P_IN]], dtype=np.float64)
     A = directed_sbm([N_BLOCK, N_BLOCK], p_matrix, C, seed=seed)
-    # block_id[i] = 0 or 1
     block_id = np.zeros(N, dtype=np.int64)
     block_id[N_BLOCK:] = 1
     return A, block_id
@@ -77,146 +68,213 @@ def build_er(seed: int):
 
 
 def assign_Q_community(block_id: np.ndarray, seed: int) -> np.ndarray:
-    """Q = +1 for block 0, −1 for block 1 (echo chamber)."""
     rng = np.random.default_rng(seed)
     Q = np.where(block_id == 0, +1.0, -1.0)
-    # Add small noise to avoid deterministic symmetry
-    flip = rng.random(N) < 0.02  # 2% random flips
+    flip = rng.random(N) < 0.02
     Q[flip] *= -1.0
     return Q
 
 
 def assign_Q_random(seed: int) -> np.ndarray:
-    """Q uniform on {−1, +1} (no correlation with community)."""
     rng = np.random.default_rng(seed)
     return rng.choice(np.array([-1.0, 1.0]), size=N)
 
 
+def mean_se(values: list[float] | np.ndarray) -> tuple[float, float]:
+    arr = np.asarray(values, dtype=np.float64)
+    if arr.size <= 1:
+        return float(arr.mean()), 0.0
+    return float(arr.mean()), float(arr.std(ddof=1) / np.sqrt(arr.size))
+
+
 def run_case(label: str, A, Q: np.ndarray, seed_dyn: int) -> dict:
     S = np.zeros(N, dtype=np.int8)
-    out = run_to_stationarity(A, Q, S, c=C, d=D, scenario=SCENARIO,
-                               n_iter=N_ITER, seed=seed_dyn)
+    out = run_to_stationarity(
+        A, Q, S, c=C, d=D, scenario=SCENARIO, n_iter=N_ITER, seed=seed_dyn
+    )
     stats = empirical_moments(out["R"], Q)
     stats["label"] = label
-    stats["R"] = out["R"]
-    stats["Q"] = Q
+    stats["q_gap"] = stats["mean_Q_plus"] - stats["mean_Q_minus"]
     return stats
 
 
-# ── main ──────────────────────────────────────────────────────────────────────
-def main() -> None:
-    # ── build graphs ──────────────────────────────────────────────────────
-    print("Building graphs ...")
-    A_sbm, block_id = build_sbm(seed=SEED)
-    A_er = build_er(seed=SEED)
+def aggregate(rows: list[dict]) -> dict:
+    out = {"label": rows[0]["label"], "rows": rows}
+    for key in ["var", "mean_Q_plus", "mean_Q_minus", "q_gap"]:
+        mean, se = mean_se([r[key] for r in rows])
+        out[f"{key}_mean"] = mean
+        out[f"{key}_se"] = se
+    return out
 
-    # ── prepare Q assignments ─────────────────────────────────────────────
-    Q_comm  = assign_Q_community(block_id, seed=SEED + 2)    # echo chamber
-    Q_rand  = assign_Q_random(seed=SEED + 3)                  # random mixing
 
-    # Also make an ER-specific random Q for fair paired comparison
-    Q_rand2 = assign_Q_random(seed=SEED + 4)
-
-    # ── 4 cases ───────────────────────────────────────────────────────────
-    cases = [
-        ("SBM + echo chamber",   A_sbm, Q_comm,  200),
-        ("SBM + random Q",       A_sbm, Q_rand,  201),
-        ("ER + echo chamber Q",  A_er,  Q_comm,  202),
-        ("ER + random Q",        A_er,  Q_rand2, 203),
-    ]
-
-    results = []
-    for label, A, Q, seed_dyn in cases:
-        print(f"  Running: {label} ...")
-        stats = run_case(label, A, Q, seed_dyn)
-        results.append(stats)
-        print(f"    Var(R*) = {stats['var']:.4f}")
-        print(f"    E[R|+]  = {stats['mean_Q_plus']:+.4f}")
-        print(f"    E[R|−]  = {stats['mean_Q_minus']:+.4f}")
-        print(f"    ΔQ gap  = {stats['mean_Q_plus'] - stats['mean_Q_minus']:+.4f}")
-
-    # ── summary table ────────────────────────────────────────────────────
-    print("\n" + "─" * 80)
-    print(f"{'Case':>22}  {'Var(R*)':>10}  {'E[R|+]':>10}  {'E[R|−]':>10}  {'ΔQ gap':>10}")
-    print("─" * 80)
+def print_summary(results: list[dict]) -> None:
+    print("\n" + "-" * 98)
+    print(
+        f"{'Case':>22}  {'Var(R*)':>15}  {'E[R|+]':>15}  "
+        f"{'E[R|-]':>15}  {'Q gap':>15}"
+    )
+    print("-" * 98)
     for r in results:
-        gap = r["mean_Q_plus"] - r["mean_Q_minus"]
-        print(f"{r['label']:>22}  {r['var']:10.4f}  {r['mean_Q_plus']:10.4f}  "
-              f"{r['mean_Q_minus']:10.4f}  {gap:10.4f}")
-    print("─" * 80)
+        print(
+            f"{r['label']:>22}  "
+            f"{r['var_mean']:8.4f} +/- {r['var_se']:<6.4f}  "
+            f"{r['mean_Q_plus_mean']:8.4f} +/- {r['mean_Q_plus_se']:<6.4f}  "
+            f"{r['mean_Q_minus_mean']:8.4f} +/- {r['mean_Q_minus_se']:<6.4f}  "
+            f"{r['q_gap_mean']:8.4f} +/- {r['q_gap_se']:<6.4f}"
+        )
+    print("-" * 98)
 
-    # ── key comparisons ──────────────────────────────────────────────────
-    r_sbm_echo = results[0]
-    r_er_echo  = results[2]
-    r_sbm_rand = results[1]
-    r_er_rand  = results[3]
 
-    echo_gap_diff = (r_sbm_echo["mean_Q_plus"] - r_sbm_echo["mean_Q_minus"]) - \
-                    (r_er_echo["mean_Q_plus"] - r_er_echo["mean_Q_minus"])
-    echo_var_diff = r_sbm_echo["var"] - r_er_echo["var"]
+def main() -> None:
+    labels = [
+        "SBM + echo chamber",
+        "SBM + random Q",
+        "ER + echo chamber Q",
+        "ER + random Q",
+    ]
+    grouped = {label: [] for label in labels}
+    paired_diffs = {
+        "echo_gap": [],
+        "echo_var": [],
+        "random_gap": [],
+        "random_var": [],
+    }
 
-    print(f"\nCommunity amplification (echo chamber):")
-    print(f"  SBM ΔQ − ER ΔQ = {echo_gap_diff:+.4f}")
-    print(f"  SBM Var − ER Var = {echo_var_diff:+.4f}")
-    print(f"  → Community structure {'amplifies' if echo_gap_diff > 0.01 else 'does NOT amplify'} "
-          f"polarization beyond selective exposure alone.")
+    print(f"Running 4 community cases x {N_SEEDS} seeds ...")
+    for rep in range(N_SEEDS):
+        seed_shift = SEED_STEP * rep
+        print(f"\nSeed batch {rep + 1}/{N_SEEDS} (seed shift={seed_shift})")
 
-    rand_gap_diff = (r_sbm_rand["mean_Q_plus"] - r_sbm_rand["mean_Q_minus"]) - \
-                    (r_er_rand["mean_Q_plus"] - r_er_rand["mean_Q_minus"])
-    print(f"\nCommunity without echo (random Q):")
-    print(f"  SBM ΔQ − ER ΔQ = {rand_gap_diff:+.4f}")
-    print(f"  → {'Community alone adds some polarization' if abs(rand_gap_diff) > 0.01 else 'No significant effect without echo chamber alignment'}")
+        A_sbm, block_id = build_sbm(seed=SEED + seed_shift)
+        A_er = build_er(seed=SEED + seed_shift)
 
-    # ── plot ─────────────────────────────────────────────────────────────
-    fig, axes = plt.subplots(2, 2, figsize=(13, 10))
+        Q_comm = assign_Q_community(block_id, seed=SEED + 2 + seed_shift)
+        Q_rand = assign_Q_random(seed=SEED + 3 + seed_shift)
 
-    bins = np.linspace(-1.0, 1.0, 51)
-    COL_PLUS  = "#c0392b"
-    COL_MINUS = "#2471a3"
+        rows = [
+            run_case(labels[0], A_sbm, Q_comm, seed_dyn=200 + seed_shift),
+            run_case(labels[1], A_sbm, Q_rand, seed_dyn=201 + seed_shift),
+            run_case(labels[2], A_er, Q_comm, seed_dyn=202 + seed_shift),
+            run_case(labels[3], A_er, Q_rand, seed_dyn=203 + seed_shift),
+        ]
 
-    # Order: SBM-echo, ER-echo, SBM-random, ER-random
-    for ax, r in zip(axes.flat, results):
-        R = r["R"]
-        Q = r["Q"]
-        pos = Q > 0
-        neg = Q < 0
+        for row in rows:
+            grouped[row["label"]].append(row)
+            print(
+                f"  {row['label']:<22} "
+                f"Var={row['var']:.4f}, E+= {row['mean_Q_plus']:+.4f}, "
+                f"E-= {row['mean_Q_minus']:+.4f}, gap={row['q_gap']:+.4f}"
+            )
 
-        ax.hist(R[pos], bins=bins, density=True, alpha=0.55,
-                color=COL_PLUS,  label=r"$Q=+1$")
-        ax.hist(R[neg], bins=bins, density=True, alpha=0.55,
-                color=COL_MINUS, label=r"$Q=-1$")
+        sbm_echo, sbm_random, er_echo, er_random = rows
+        paired_diffs["echo_gap"].append(sbm_echo["q_gap"] - er_echo["q_gap"])
+        paired_diffs["echo_var"].append(sbm_echo["var"] - er_echo["var"])
+        paired_diffs["random_gap"].append(sbm_random["q_gap"] - er_random["q_gap"])
+        paired_diffs["random_var"].append(sbm_random["var"] - er_random["var"])
 
-        gap = r["mean_Q_plus"] - r["mean_Q_minus"]
-        txt = (f"Var(R*) = {r['var']:.4f}\n"
-               f"E[R|+] = {r['mean_Q_plus']:+.4f}\n"
-               f"E[R|−] = {r['mean_Q_minus']:+.4f}\n"
-               f"ΔQ gap = {gap:+.4f}")
-        ax.text(0.02, 0.98, txt, transform=ax.transAxes,
-                va="top", ha="left", fontsize=8,
-                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.85))
+    results = [aggregate(grouped[label]) for label in labels]
+    print_summary(results)
 
-        # Mark conditional means
-        ax.axvline(x=r["mean_Q_plus"],  color=COL_PLUS,  ls="--", lw=1.2, alpha=0.6)
-        ax.axvline(x=r["mean_Q_minus"], color=COL_MINUS, ls="--", lw=1.2, alpha=0.6)
+    print("\nPaired SBM - ER differences:")
+    for key, label in [
+        ("echo_gap", "Echo chamber Q gap"),
+        ("echo_var", "Echo chamber variance"),
+        ("random_gap", "Random-Q gap"),
+        ("random_var", "Random-Q variance"),
+    ]:
+        mean, se = mean_se(paired_diffs[key])
+        print(f"  {label:<24} = {mean:+.4f} +/- {se:.4f}")
 
-        ax.set_xlim(-1, 1)
-        ax.set_xlabel("Opinion $R^*$", fontsize=10)
-        ax.set_title(r["label"], fontsize=10)
-        ax.legend(fontsize=7.5, loc="upper right")
-        ax.grid(alpha=0.3)
+    x = np.arange(len(results))
+    colors = ["#4c78a8", "#59a14f", "#f28e2b", "#e15759"]
 
-    for ax in axes[:, 0]:
-        ax.set_ylabel("Density", fontsize=10)
+    fig, axes = plt.subplots(2, 2, figsize=(13, 9))
+    ax_var, ax_gap, ax_means, ax_diff = axes.flat
+
+    def setup_cases(ax) -> None:
+        ax.set_xticks(x)
+        ax.set_xticklabels([r["label"] for r in results], rotation=20, ha="right", fontsize=8)
+        ax.grid(axis="y", alpha=0.3)
+
+    ax_var.bar(
+        x,
+        [r["var_mean"] for r in results],
+        yerr=[r["var_se"] for r in results],
+        color=colors,
+        alpha=0.85,
+        capsize=4,
+    )
+    ax_var.axhline(PAPER["var"], color="black", ls="--", lw=1.1, label="Source Fig. 4")
+    ax_var.set_ylabel(r"$\mathrm{Var}(R^*)$")
+    ax_var.set_title("Stationary variance, 5 seeds")
+    setup_cases(ax_var)
+    ax_var.legend(fontsize=8)
+
+    ax_gap.bar(
+        x,
+        [r["q_gap_mean"] for r in results],
+        yerr=[r["q_gap_se"] for r in results],
+        color=colors,
+        alpha=0.85,
+        capsize=4,
+    )
+    paper_gap = PAPER["mean_plus"] - PAPER["mean_minus"]
+    ax_gap.axhline(paper_gap, color="black", ls="--", lw=1.1, label="Source Fig. 4")
+    ax_gap.set_ylabel(r"$E[R|Q=+1]-E[R|Q=-1]$")
+    ax_gap.set_title("Conditional mean gap, 5 seeds")
+    setup_cases(ax_gap)
+    ax_gap.legend(fontsize=8)
+
+    width = 0.36
+    ax_means.bar(
+        x - width / 2,
+        [r["mean_Q_plus_mean"] for r in results],
+        yerr=[r["mean_Q_plus_se"] for r in results],
+        width=width,
+        color="#c0392b",
+        alpha=0.8,
+        capsize=4,
+        label=r"$Q=+1$",
+    )
+    ax_means.bar(
+        x + width / 2,
+        [r["mean_Q_minus_mean"] for r in results],
+        yerr=[r["mean_Q_minus_se"] for r in results],
+        width=width,
+        color="#2471a3",
+        alpha=0.8,
+        capsize=4,
+        label=r"$Q=-1$",
+    )
+    ax_means.axhline(0, color="black", lw=0.7)
+    ax_means.set_ylabel("Conditional mean")
+    ax_means.set_title("Group centers, 5 seeds")
+    setup_cases(ax_means)
+    ax_means.legend(fontsize=8)
+
+    diff_labels = ["Echo gap", "Echo var", "Random gap", "Random var"]
+    diff_keys = ["echo_gap", "echo_var", "random_gap", "random_var"]
+    dx = np.arange(len(diff_keys))
+    diff_means = [mean_se(paired_diffs[key])[0] for key in diff_keys]
+    diff_ses = [mean_se(paired_diffs[key])[1] for key in diff_keys]
+    ax_diff.bar(dx, diff_means, yerr=diff_ses, color=["#9467bd", "#8c564b", "#17becf", "#7f7f7f"],
+                alpha=0.85, capsize=4)
+    ax_diff.axhline(0, color="black", lw=0.8)
+    ax_diff.set_xticks(dx)
+    ax_diff.set_xticklabels(diff_labels, rotation=15, ha="right", fontsize=8)
+    ax_diff.set_ylabel("SBM - ER paired difference")
+    ax_diff.set_title("Community amplification, paired by seed")
+    ax_diff.grid(axis="y", alpha=0.3)
 
     fig.suptitle(
-        "Variation 4 — Community structure (SBM) vs random mixing (ER)\n"
-        rf"$c={C},\;d={D}$, selective exposure, $n={N}$",
-        fontsize=11, y=0.99,
+        "Variation 4 - community structure and selective exposure\n"
+        rf"$c={C},\;d={D}$, $n={N}$, mean +/- SE over {N_SEEDS} seeds",
+        fontsize=12,
     )
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.tight_layout(rect=[0, 0, 1, 0.93])
     FIG_PATH.parent.mkdir(exist_ok=True)
     fig.savefig(FIG_PATH, dpi=150, bbox_inches="tight")
-    print(f"\nFigure saved → {FIG_PATH}")
+    print(f"\nFigure saved -> {FIG_PATH}")
     plt.close(fig)
 
 

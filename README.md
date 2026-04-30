@@ -9,9 +9,10 @@ bot, and community-structure variations.
 
 ## Report
 
-The current paper draft is `report.tex`. PDF files are treated as local build
-artifacts and are intentionally ignored by git, including any locally compiled
-`report.pdf` or reference PDFs kept outside version control.
+The current paper draft is maintained locally as `report.tex`. The TeX source
+and PDF files are treated as local submission/build artifacts and are
+intentionally ignored by git, including any locally compiled `report.pdf` or
+reference PDFs kept outside version control.
 
 To rebuild the PDF while keeping LaTeX auxiliary files out of the repository
 root:
@@ -57,10 +58,13 @@ Generated figures are saved in `figures/`.
 
 - The original paper does not report random seeds, iteration counts, or ensemble
   replicates, so these scripts use documented seeds and iteration limits.
-- Figure 4 now reports a 10-seed standard-error check; most other figures are
-  single-run replications unless otherwise noted.
+- Figure 4 reports a 10-seed standard-error check. Variations 1 and 4 report
+  5-seed mean ± standard error summaries; the remaining baseline figures and
+  variation scans are single-run unless otherwise noted.
 - Figures 1-3 use a coupled-chain convergence diagnostic to check decay of the
   initial-condition effect.
 - Variation 1 should be interpreted as topology/degree-distribution sensitivity;
   mean degree and low-degree mass are reported because they can confound a pure
   heavy-tail comparison.
+- Variation 4 should be interpreted as a finite-network community-alignment
+  check, not a full modularity sweep.
