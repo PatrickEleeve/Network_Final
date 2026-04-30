@@ -28,6 +28,7 @@ from src.validation import empirical_moments
 N = 1000
 P = 0.03
 SEED = 42
+CONVERGENCE_TOL = 1e-6
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -43,14 +44,14 @@ CASES = {
         "title": "Figure 2 replication - polarized media independent of Q",
         "c": 0.5,
         "d": 0.001,
-        "n_iter": 8000,
+        "n_iter": 16000,
         "ylim": (0, 55),
     },
     "fig3": {
         "title": "Figure 3 replication - skewed media independent of Q",
         "c": 0.5,
         "d": 0.001,
-        "n_iter": 8000,
+        "n_iter": 16000,
         "ylim": (0, 55),
     },
 }
@@ -79,11 +80,15 @@ def run_panel(scenario: str, c: float, d: float, Q: np.ndarray, S: np.ndarray,
     out = run_to_stationarity(
         A, Q, S, c=c, d=d, scenario=scenario,
         n_iter=CASES[scenario]["n_iter"], seed=seed_dyn,
+        coupled_tol=CONVERGENCE_TOL,
     )
     stats = empirical_moments(out["R"], Q=np.sign(Q))
     stats["R"] = out["R"]
     stats["c"] = c
     stats["d"] = d
+    stats["n_iter_run"] = out["n_iter_run"]
+    stats["converged"] = out["converged"]
+    stats["coupled_diff"] = out["coupled_diff"]
     return stats
 
 
@@ -103,7 +108,10 @@ def make_figure(scenario: str) -> None:
 
     for label, res in [("Memory", mem), ("No-memory", nom)]:
         print(f"  {label}: c={res['c']:.6g}, d={res['d']:.6g}, "
-              f"mean={res['mean']:+.4f}, var={res['var']:.6f}")
+              f"mean={res['mean']:+.4f}, var={res['var']:.6f}, "
+              f"iters={res['n_iter_run']}, "
+              f"coupled_diff={res['coupled_diff']:.2e}, "
+              f"converged={res['converged']}")
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5), sharey=True)
     bins = np.linspace(-1.0, 1.0, 51)

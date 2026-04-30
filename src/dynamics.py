@@ -6,11 +6,15 @@ where Delta = A + (1 - c - d) I.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 from scipy import sparse
 
 from .graph_construction import in_degree
 from .signals import external_signal, sample_media
+
+MediaSampler = Callable[[np.ndarray, np.ndarray, np.random.Generator], np.ndarray]
 
 
 def one_step_update(
@@ -37,10 +41,17 @@ def run_to_stationarity(
     R0: np.ndarray | None = None,
     record_trajectory: bool = False,
     record_every: int = 1,
+    media_sampler: MediaSampler | None = None,
+    coupled_tol: float | None = None,
 ) -> dict:
     """Iterate the recursion for n_iter steps and return the final state.
 
     If record_trajectory, store R at every `record_every`-th step (plus step 0).
+    If media_sampler is provided, it overrides scenario-based Z sampling.
+
+    coupled_tol uses a second chain with the same media shocks and a different
+    initial condition.  Stopping when the two chains are close checks decay of
+    initial-condition dependence, which is the contraction in Theorem 1.
     """
     n = A.shape[0]
     rng = np.random.default_rng(seed)
@@ -64,16 +75,45 @@ def run_to_stationarity(
     if record_trajectory:
         traj = [R.copy()]
 
+    R_coupled = None
+    coupled_diff = None
+    if coupled_tol is not None:
+        if coupled_tol <= 0:
+            raise ValueError("coupled_tol must be positive")
+        R_coupled = -R
+        if fixed.any():
+            R_coupled[fixed] = Q[fixed]
+        coupled_diff = float(np.max(np.abs(R - R_coupled)))
+
+    sampler = media_sampler
+    n_iter_run = 0
+    converged = False
     for k in range(n_iter):
-        Z = sample_media(Q, S, scenario, rng)
+        if sampler is not None:
+            Z = sampler(Q, S, rng)
+        else:
+            Z = sample_media(Q, S, scenario, rng)
         W = external_signal(Q, Z, in_deg, c, d)
         R = one_step_update(R, A, W, c, d)
+        if R_coupled is not None:
+            R_coupled = one_step_update(R_coupled, A, W, c, d)
         if fixed.any():
             R[fixed] = Q[fixed]
+            if R_coupled is not None:
+                R_coupled[fixed] = Q[fixed]
         if record_trajectory and ((k + 1) % record_every == 0):
             traj.append(R.copy())
+        n_iter_run = k + 1
+        if R_coupled is not None:
+            coupled_diff = float(np.max(np.abs(R - R_coupled)))
+            if coupled_diff <= coupled_tol:
+                converged = True
+                break
 
-    out: dict = {"R": R}
+    out: dict = {"R": R, "n_iter_run": n_iter_run}
     if record_trajectory:
         out["trajectory"] = np.array(traj)
+    if coupled_tol is not None:
+        out["converged"] = converged
+        out["coupled_diff"] = coupled_diff
     return out

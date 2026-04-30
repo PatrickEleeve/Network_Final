@@ -79,8 +79,11 @@ Generated figures are saved in `figures/`.
 ## Notes
 
 - The original paper does not report random seeds, iteration counts, or ensemble
-  replicates, so these scripts use fixed seeds and documented iteration counts.
-- Figures are single-run replications unless otherwise noted.
+  replicates, so these scripts use documented seeds and iteration limits.
+- Figure 4 now reports a 10-seed standard-error check; most other figures are
+  single-run replications unless otherwise noted.
+- Figures 1-3 use a coupled-chain convergence diagnostic to check decay of the
+  initial-condition effect.
 - Variation 1 should be interpreted as topology/degree-distribution sensitivity;
   mean degree and low-degree mass are reported because they can confound a pure
   heavy-tail comparison.

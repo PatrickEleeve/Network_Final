@@ -34,8 +34,9 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.attributes import sample_attributes
-from src.graph_construction import directed_er, directed_er_with_bots, in_degree
-from src.signals import external_signal, sample_media
+from src.dynamics import run_to_stationarity
+from src.graph_construction import directed_er, directed_er_with_bots
+from src.signals import sample_media
 from src.validation import empirical_moments
 
 # ── parameters ───────────────────────────────────────────────────────────────
@@ -70,26 +71,20 @@ def run_bot_dynamics(
     listen to bot opinions during every update, so bots must be pinned from
     initialization onward for the balanced-bot experiment to mean what it says.
     """
-    n = len(Q)
-    rng = np.random.default_rng(seed_dyn)
-    deg = in_degree(A)
-    memory = 1.0 - C - D
-
-    R = rng.choice(np.array([-1.0, 1.0]), size=n).astype(np.float64)
-    if is_bot.any():
-        R[is_bot] = Q[is_bot]
-
     scenario = "fig5" if not balanced else "fig4"
-    for _ in range(N_ITER):
-        Z = sample_media(Q, S, scenario, rng)
-        if is_bot.any():
-            Z[is_bot] = Q[is_bot]
-        W = external_signal(Q, Z, deg, C, D)
-        R = A @ R + memory * R + W
-        if is_bot.any():
-            R[is_bot] = Q[is_bot]
 
-    return R
+    def media_sampler(Q_: np.ndarray, S_: np.ndarray,
+                      rng: np.random.Generator) -> np.ndarray:
+        Z = sample_media(Q_, S_, scenario, rng)
+        if is_bot.any():
+            Z[is_bot] = Q_[is_bot]
+        return Z
+
+    out = run_to_stationarity(
+        A, Q, S, c=C, d=D, scenario=scenario,
+        n_iter=N_ITER, seed=seed_dyn, media_sampler=media_sampler,
+    )
+    return out["R"]
 
 
 def run_bot_case(prop_bots: float, balanced: bool, seed_base: int) -> dict:

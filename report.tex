@@ -31,10 +31,11 @@ behind the stationary limit, and added four robustness experiments involving
 topology, selective exposure, bot prevalence, and community structure.  The main
 replication is successful at the qualitative level and is close quantitatively
 for the central polarization benchmark: in our reproduction of source-paper
-Figure~4,
-$\mathrm{Var}(R^*)=0.1460$ in the memory case, compared with the paper's
-reported value near $0.1484$, and the conditional means are
-$0.3738$ and $-0.3646$ for the two opinion groups.  The variation studies
+Figure~4, the memory case gives
+$\mathrm{Var}(R^*)=0.1460$ in the displayed seed, and averaging over ten
+independent seeds gives $0.1449\pm0.0006$.  The no-memory case gives
+$0.1454\pm0.0006$, close to the corresponding Proposition~4 finite-graph
+prediction $0.1459\pm0.0000$.  The variation studies
 support the paper's mechanism for selective exposure, but they also clarify its
 scope.  Comparable well-connected non-ER networks produce similar outcomes,
 whereas sparse or community-aligned networks can substantially alter the
@@ -221,8 +222,8 @@ main parameter choices.
 Scenario & Memory case $(c,d)$ & No-memory case $(c,d)$ & Signal $Z$ & Iterations \\
 \midrule
 Source Fig. 1 & $(0.001,0.300)$ & $(0.003322,0.996678)$ & $U(-0.03,0.03)$ & 500 \\
-Source Fig. 2 & $(0.500,0.001)$ & $(0.998004,0.001996)$ & $\{-1,+1\}$ & 8000 \\
-Source Fig. 3 & $(0.500,0.001)$ & $(0.998004,0.001996)$ & $-1+2\mathrm{Beta}(1,8)$ & 8000 \\
+Source Fig. 2 & $(0.500,0.001)$ & $(0.998004,0.001996)$ & $\{-1,+1\}$ & 16000 max \\
+Source Fig. 3 & $(0.500,0.001)$ & $(0.998004,0.001996)$ & $-1+2\mathrm{Beta}(1,8)$ & 16000 max \\
 Source Fig. 4 & $(0.500,0.450)$ & $(0.5263,0.4737)$ & selective exposure & 200 \\
 Source Fig. 5 & $(0.500,0.450)$ & $(0.5263,0.4737)$ & selective exposure + bots & 200 \\
 Source Fig. 6 & $(0.300,0.200)$ & $(0.600,0.400)$ & $U(-1,1)$ & 300 \\
@@ -358,16 +359,24 @@ essentially zero at the displayed precision.
 The source paper's Figure~4 is the strongest quantitative match in our
 replication.  This scenario links the media distribution to the internal opinion
 $Q_i$, so the two groups receive systematically different signals.  In the
-memory case, we obtain $\mathrm{Var}(R^*)=0.1460$; the target reported in the
-paper is approximately $0.1484$.  The conditional means are
+memory case, we obtain $\mathrm{Var}(R^*)=0.1460$ in the displayed seed.  The
+source paper reports a nearby Figure~4 benchmark of approximately $0.1484$.
+This value should be read as a source-paper numerical reference, not as a
+direct Proposition~4 prediction for the memory case, because Proposition~4
+assumes $c+d=1$.  The conditional means are
 $\mathbb{E}[R^*\mid Q=+1]=0.3738$ and
 $\mathbb{E}[R^*\mid Q=-1]=-0.3646$, compared with the paper's reference values
 near $0.3684$ and $-0.3684$.  Conditional variances are also close:
 $0.0092$ and $0.0103$, relative to the reported value near $0.0095$.
 
 The no-memory panel is similarly close, with $\mathrm{Var}(R^*)=0.1451$ and
-conditional means $0.3679$ and $-0.3627$.  These results support the paper's
-main polarization mechanism: when $d$ is large enough and
+conditional means $0.3679$ and $-0.3627$.  For the realized no-memory graph,
+$\rho_2=n^{-1}\sum_i\sum_j A_{ij}^2=0.00958$, and the Proposition~4
+finite-graph prediction is $\mathrm{Var}(R^*)=0.1460$.  Across ten independent
+graph, attribute, and dynamics seeds, the memory variance is
+$0.1449\pm0.0006$ and the no-memory variance is $0.1454\pm0.0006$; the
+no-memory Proposition~4 prediction is $0.1459\pm0.0000$.  These results support
+the paper's main polarization mechanism: when $d$ is large enough and
 $\mathbb{E}[Z\mid Q]$ differs sharply across groups, the stationary distribution
 splits into two clusters instead of collapsing to one consensus point.
 
@@ -587,9 +596,10 @@ no-memory processes.
 
 The results also show that the paper's simulations are reproducible from the
 published equations, even without author code.  The most important numerical
-benchmark, source-paper Figure~4, is close to the reported values.  This gives
-confidence that our implementation captures the intended recursion rather than
-only producing visually similar plots.
+benchmark, source-paper Figure~4, is close to the reported values, and the
+no-memory panel matches the applicable Proposition~4 finite-graph prediction.
+This gives confidence that our implementation captures the intended recursion
+rather than only producing visually similar plots.
 
 \subsection{Scientific Critique}
 
@@ -622,9 +632,10 @@ ambiguous.
 
 \subsection{Limitations of Our Project}
 
-Our own study also has limits.  Most experiments are single-seed reproductions
-or parameter scans over one graph size, so they should not be read as
-asymptotic empirical laws.  The power-law configuration model removes
+Our own study also has limits.  Except for the ten-seed Figure~4 check, most
+experiments are single-seed reproductions or parameter scans over one graph
+size, so they should not be read as asymptotic empirical laws.  The power-law
+configuration model removes
 self-loops and multi-edges, which changes the realized degree distribution
 relative to an unrestricted configuration model.  The community experiment uses
 one two-block SBM design rather than a full modularity sweep.  These choices are
@@ -728,9 +739,10 @@ regenerates the MATLAB versions of source-paper Figures~1--7.  Generated Python
 figures are stored in \texttt{figures/}; MATLAB outputs are stored in
 \texttt{figures\_matlab/}.
 
-Main implementation assumptions are equal inbound-neighbor weights, fixed random
-seeds, independently sampled media signals at each time step, conservative
-iteration counts, and independent implementation from the equations in the
-paper rather than from author code.
+Main implementation assumptions are equal inbound-neighbor weights, documented
+seed lists, independently sampled media signals at each time step, conservative
+maximum iteration counts with a coupled-chain convergence diagnostic, and
+independent implementation from the equations in the paper rather than from
+author code.
 
 \end{document}

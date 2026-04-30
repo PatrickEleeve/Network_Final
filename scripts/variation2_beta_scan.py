@@ -24,10 +24,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import beta as beta_dist
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from src.dynamics import run_to_stationarity
 from src.graph_construction import directed_er
 from src.validation import empirical_moments
 
@@ -64,28 +64,18 @@ def sample_media_parametric(Q: np.ndarray, b: float,
     return Z
 
 
-def external_signal_custom(Q: np.ndarray, Z: np.ndarray, in_deg: np.ndarray,
-                            c: float, d: float) -> np.ndarray:
-    """Same as src/signals.py external_signal but standalone for clarity."""
-    W = d * Z
-    W[in_deg == 0] += c * Q[in_deg == 0]
-    return W
-
-
 def run_simulation(b: float, A, Q: np.ndarray, S: np.ndarray,
-                   in_deg: np.ndarray, seed_dyn: int) -> dict:
+                   seed_dyn: int) -> dict:
     """Run opinion dynamics with parametrized Beta(b,1)/(1,b) media."""
-    n = len(Q)
-    rng = np.random.default_rng(seed_dyn)
-    R = rng.choice(np.array([-1.0, 1.0]), size=n).astype(np.float64)
+    def media_sampler(Q_: np.ndarray, _S: np.ndarray,
+                      rng: np.random.Generator) -> np.ndarray:
+        return sample_media_parametric(Q_, b, rng)
 
-    for _ in range(N_ITER):
-        Z = sample_media_parametric(Q, b, rng)
-        W = external_signal_custom(Q, Z, in_deg, C, D)
-        memory = 1.0 - C - D
-        R = A @ R + memory * R + W
-
-    return empirical_moments(R, Q)
+    out = run_to_stationarity(
+        A, Q, S, c=C, d=D, scenario=SCENARIO,
+        n_iter=N_ITER, seed=seed_dyn, media_sampler=media_sampler,
+    )
+    return empirical_moments(out["R"], Q)
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -93,7 +83,6 @@ def main() -> None:
     # build graph & attributes once
     print(f"Building ER(n={N}, p={P}), seed={SEED} ...")
     A = directed_er(N, P, C, seed=SEED)
-    in_deg = np.array(np.diff(A.indptr))
 
     rng_attr = np.random.default_rng(SEED + 1)
     Q = rng_attr.choice(np.array([-1.0, 1.0]), size=N)
@@ -110,7 +99,7 @@ def main() -> None:
 
     print(f"\nScanning {len(B_VALUES)} Beta asymmetry values ...")
     for i, b in enumerate(B_VALUES):
-        stats = run_simulation(b, A, Q, S, in_deg, seed_dyn=101 + i)
+        stats = run_simulation(b, A, Q, S, seed_dyn=101 + i)
         vars_r.append(stats["var"])
         gaps_q.append(stats["mean_Q_plus"] - stats["mean_Q_minus"])
         means_p.append(stats["mean_Q_plus"])
