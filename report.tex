@@ -81,7 +81,7 @@ also depend on the particular topology used in the simulations?
 
 Our project has four goals.  We first restate the original model and the
 theoretical claims that guide the computation.  We then implement the dynamics
-from scratch in a modular Python and MATLAB codebase.  Next, we reproduce the
+from scratch in a modular Python codebase.  Next, we reproduce the
 main simulation figures and compare them with the values reported in the paper.
 Finally, we run new variation studies to examine whether the paper's
 interpretation remains stable when important assumptions are changed.
@@ -644,9 +644,9 @@ many graph realizations and report confidence intervals.
 
 \subsection{Reproducibility and AI Use}
 
-The repository contains the Python source code, scripts for each figure, MATLAB
-versions of the reproduced figure scripts, and dependency information.  The
-generated figures are build artifacts that can be regenerated from the scripts.
+The repository contains the Python source code, scripts for each figure, and
+dependency information.  The generated figures are build artifacts that can be
+regenerated from the scripts.
 The project used large language models as assistance for code drafting,
 debugging suggestions, and language polishing.  The mathematical
 interpretation, experimental design, script execution, and numerical claims in
@@ -728,16 +728,7 @@ python3 scripts/variation4_community.py
 \end{verbatim}
 \end{quote}
 
-MATLAB figure scripts are stored in \texttt{matlab/}.  Running
-\begin{quote}
-\small
-\begin{verbatim}
-matlab/run_all_matlab_reproductions.m
-\end{verbatim}
-\end{quote}
-regenerates the MATLAB versions of source-paper Figures~1--7.  Generated Python
-figures are stored in \texttt{figures/}; MATLAB outputs are stored in
-\texttt{figures\_matlab/}.
+Generated Python figures are stored in \texttt{figures/}.
 
 Main implementation assumptions are equal inbound-neighbor weights, documented
 seed lists, independently sampled media signals at each time step, conservative

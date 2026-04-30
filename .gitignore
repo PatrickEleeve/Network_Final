@@ -13,6 +13,5 @@ figures/*.jpg
 figures/*.jpeg
 figures/*.pdf
 figures/*.svg
-figures_matlab/
 !figures/.gitkeep
 !results/.gitkeep

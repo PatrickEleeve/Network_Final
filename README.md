@@ -42,29 +42,6 @@ python3 scripts/replicate_fig7.py
 python3 scripts/validate_theorem1.py
 ```
 
-## MATLAB Figure Versions
-
-Each reproduced paper figure also has its own MATLAB entry script:
-
-```matlab
-run("matlab/replicate_fig1_matlab.m")
-run("matlab/replicate_fig2_matlab.m")
-run("matlab/replicate_fig3_matlab.m")
-run("matlab/replicate_fig4_matlab.m")
-run("matlab/replicate_fig5_matlab.m")
-run("matlab/replicate_fig6_matlab.m")
-run("matlab/replicate_fig7_matlab.m")
-```
-
-To render all MATLAB versions:
-
-```matlab
-run("matlab/run_all_matlab_reproductions.m")
-```
-
-MATLAB outputs are saved in `figures_matlab/` as 450 DPI PNG files and vector
-PDF files for paper layout.
-
 ## Variation Studies
 
 ```bash
