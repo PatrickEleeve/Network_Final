@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 *.pdf
 thesis_master_overview.md
+AGENTS.md
+CLAUDE.md
 .venv/
 .DS_Store
 .claude/
